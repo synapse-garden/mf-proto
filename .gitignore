@@ -22,3 +22,8 @@ _testmain.go
 *.exe
 *.test
 *.prof
+
+*.sw[nop]
+
+key.key
+cert.pem
