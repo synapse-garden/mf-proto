@@ -3,14 +3,21 @@ package main
 import (
 	"fmt"
 	"net/http"
+
+	htr "github.com/julienschmidt/httprouter"
+
+	"github.com/synapse-garden/mf-proto/auth"
+	"github.com/synapse-garden/mf-proto/router"
+	"github.com/synapse-garden/mf-proto/task"
+	"github.com/synapse-garden/mf-proto/user"
 )
 
 func main() {
-	httpMux := http.NewServeMux()
-	httpsMux := http.NewServeMux()
+	httpMux := htr.New()
+	httpsMux := htr.New()
 
-	httpMux.HandleFunc("/", home)
-	httpsMux.HandleFunc("/", home)
+	router.SetupRoutes(httpMux, &user.UserAPI{}, &task.TaskAPI{})
+	router.SetupRoutes(httpsMux, &auth.AuthAPI{})
 
 	var (
 		err    = make(chan error)
