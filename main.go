@@ -1,23 +1,37 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 
+	"github.com/boltdb/bolt"
 	htr "github.com/julienschmidt/httprouter"
 
-	"github.com/synapse-garden/mf-proto/auth"
+	"github.com/synapse-garden/mf-proto/API"
 	"github.com/synapse-garden/mf-proto/router"
-	"github.com/synapse-garden/mf-proto/task"
-	"github.com/synapse-garden/mf-proto/user"
 )
 
 func main() {
+	db, err := bolt.Open("my.db", 0600, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	go runHTTPListeners(db)
+	// Handle console input?
+	select {}
+}
+
+func runHTTPListeners(db *bolt.DB) {
 	httpMux := htr.New()
 	httpsMux := htr.New()
 
-	router.SetupRoutes(httpMux, &user.UserAPI{}, &task.TaskAPI{})
-	router.SetupRoutes(httpsMux, &auth.AuthAPI{})
+	router.SetupRoutes(httpMux,
+		&API.UserAPI{},
+		&API.TaskAPI{},
+	)
+	router.SetupRoutes(httpsMux,
+		&API.AuthAPI{},
+	)
 
 	var (
 		err    = make(chan error)
@@ -35,15 +49,5 @@ func main() {
 	case e = <-err:
 	case e = <-tlsErr:
 	}
-	panic(e)
-}
-
-func home(w http.ResponseWriter, req *http.Request) {
-	// The "/" pattern matches everything, so we need to check
-	// that we're at the root here.
-	if req.URL.Path != "/" {
-		http.NotFound(w, req)
-		return
-	}
-	fmt.Fprintf(w, "There is nothing here.")
+	log.Fatal(e)
 }

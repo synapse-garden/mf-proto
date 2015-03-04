@@ -27,3 +27,4 @@ _testmain.go
 
 key.key
 cert.pem
+*.db

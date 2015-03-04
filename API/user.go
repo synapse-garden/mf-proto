@@ -1,4 +1,4 @@
-package user
+package API
 
 import htr "github.com/julienschmidt/httprouter"
 
