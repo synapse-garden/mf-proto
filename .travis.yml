@@ -1,0 +1,10 @@
+language: go
+
+go: tip
+
+install: 
+  - go get -u github.com/julienschmidt/httprouter
+  - go get -u github.com/boltdb/bolt
+
+script:
+  - go test -v ./...

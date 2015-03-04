@@ -1,9 +1,8 @@
 package auth
 
-import htr "github.com/julienschmidt/httprouter"
+import "github.com/synapse-garden/mf-proto/util"
 
-type AuthAPI struct{}
-
-func (t *AuthAPI) AddRoutes(router *htr.Router) {
-	// htr.GET
+type Auth struct {
 }
+
+func authUser(email, pwhash string) util.Key {}
