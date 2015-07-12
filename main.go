@@ -6,48 +6,53 @@ import (
 
 	"github.com/boltdb/bolt"
 	htr "github.com/julienschmidt/httprouter"
-
-	"github.com/synapse-garden/mf-proto/API"
-	"github.com/synapse-garden/mf-proto/router"
+	"github.com/synapse-garden/mf-proto/api"
+	"github.com/synapse-garden/mf-proto/db"
 )
 
 func main() {
-	db, err := bolt.Open("my.db", 0600, nil)
+	d, err := bolt.Open("my.db", 0600, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("setting up db failed: %s", err.Error())
 	}
-	go runHTTPListeners(db)
-	// Handle console input?
+
+	go runHTTPListeners(d)
+
+	// TODO: Handle console input
 	select {}
 }
 
-func runHTTPListeners(db *bolt.DB) {
+func runHTTPListeners(d db.DB) {
 	httpMux := htr.New()
 	httpsMux := htr.New()
 
-	router.SetupRoutes(httpMux,
-		&API.UserAPI{},
-		&API.TaskAPI{},
-	)
-	router.SetupRoutes(httpsMux,
-		&API.AuthAPI{},
+	// httpMux.SetupRoutes()
+	err := api.SetupRoutes(
+		httpsMux,
+		api.Auth(d),
+		api.User(d),
+		api.Task(d),
 	)
 
+	if err != nil {
+		log.Fatalf("router setup failed: %s\n", err.Error())
+	}
+
 	var (
-		err    = make(chan error)
-		tlsErr = make(chan error)
+		httpErr  = make(chan error)
+		httpsErr = make(chan error)
 	)
 
 	println("Listening on HTTP 25000")
 	println("Listening on HTTPS 25001")
 
-	go func() { err <- http.ListenAndServeTLS(":25001", "cert.pem", "key.key", httpsMux) }()
-	go func() { tlsErr <- http.ListenAndServe(":25000", httpMux) }()
+	go func() { httpErr <- http.ListenAndServeTLS(":25001", "cert.pem", "key.key", httpsMux) }()
+	go func() { httpsErr <- http.ListenAndServe(":25000", httpMux) }()
 
 	var e error
 	select {
-	case e = <-err:
-	case e = <-tlsErr:
+	case e = <-httpErr:
+	case e = <-httpsErr:
 	}
-	log.Fatal(e)
+	log.Fatal("error serving http(s): %s", e.Error())
 }
