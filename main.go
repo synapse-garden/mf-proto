@@ -15,6 +15,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("setting up db failed: %s", err.Error())
 	}
+	defer d.Close()
 
 	go runHTTPListeners(d)
 

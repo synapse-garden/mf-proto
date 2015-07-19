@@ -1,4 +1,4 @@
 github.com/boltdb/bolt	git	550b8c7cb64d61665aefda8dd52ad8c34e725be5	2015-04-28T18:12:55Z
+github.com/juju/errors	git	4567a5e69fd3130ca0d89f69478e7ac025b67452	2015-03-27T19:24:31Z
 github.com/julienschmidt/httprouter	git	6aacfd5ab513e34f7e64ea9627ab9670371b34e7	2015-07-08T21:54:00Z
-github.com/streadway/simpleuuid	git	6617b501e485b77e61b98cd533aefff9e258b5a7	2013-04-20T16:55:45Z
-golang.org/x/crypto	git	1fbbd62cfec66bd39d91e97749579579d4d3037e	2014-12-09T23:26:36Z
+github.com/segmentio/go-log	git	9c7ea0f744953ff5220087609a8525790dc01d8b	2014-12-05T20:14:27Z
