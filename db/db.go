@@ -74,3 +74,13 @@ func GetByKey(d DB, bucket Bucket, key []byte) ([]byte, error) {
 
 	return result, nil
 }
+
+func DeleteByKey(d DB, bucket Bucket, key []byte) error {
+	return d.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bucket))
+		if b == nil {
+			return BucketNotFoundErr(bucket)
+		}
+		return b.Delete(key)
+	})
+}
