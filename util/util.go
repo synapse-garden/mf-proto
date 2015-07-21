@@ -2,18 +2,37 @@ package util
 
 import (
 	"crypto/sha1"
-	"time"
-
-	uuid "github.com/streadway/simpleuuid"
-	k "golang.org/x/crypto/pbkdf2"
+	"encoding/hex"
+	"io"
 )
 
-type Key []byte
+type Key string
+type Hash string
+type Salt string
 
-func PwHashKey(pwhash []byte) (Key, error) {
-	salt, err := uuid.NewTime(time.Now())
-	if err != nil {
-		return Key{}, err
-	}
-	return Key(k.Key(pwhash, salt.Bytes(), 4096, 32, sha1.New)), nil
+func CheckHashedPw(pw string, salt Salt, hash Hash) bool {
+	hashedPw := sha1.Sum([]byte(pw))
+	sha := sha1.New()
+	io.WriteString(sha, string(salt))
+	io.WriteString(sha, hex.EncodeToString(hashedPw[:]))
+	return hex.EncodeToString(sha.Sum(nil)[:]) == string(hash)
+}
+
+func HashedAndSalt(pw, saltSeed string) (Hash, Salt) {
+	hashedPw := sha1.Sum([]byte(pw))
+	sha := sha1.New()
+	hashedSalt := sha1.Sum([]byte(saltSeed))
+	io.WriteString(sha, hex.EncodeToString(hashedSalt[:]))
+	io.WriteString(sha, hex.EncodeToString(hashedPw[:]))
+	return Hash(hex.EncodeToString(sha.Sum(nil)[:])),
+		Salt(hex.EncodeToString(hashedSalt[:]))
+}
+
+func SaltedHash(pw, saltSeed string) Key {
+	hashedPw := sha1.Sum([]byte(pw))
+	sha := sha1.New()
+	hashedSalt := sha1.Sum([]byte(saltSeed))
+	io.WriteString(sha, hex.EncodeToString(hashedSalt[:]))
+	io.WriteString(sha, hex.EncodeToString(hashedPw[:]))
+	return Key(hex.EncodeToString(sha.Sum(nil)[:]))
 }

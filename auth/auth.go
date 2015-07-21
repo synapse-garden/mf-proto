@@ -1,35 +1,98 @@
 package auth
 
 import (
-	"github.com/boltdb/bolt"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/juju/errors"
 	"github.com/synapse-garden/mf-proto/db"
 	"github.com/synapse-garden/mf-proto/util"
 )
 
-type Auther interface {
-	StoreKey(email, key []byte) error
+type b []byte
+
+const (
+	SessionKeys db.Bucket = "auth-session-keys"
+	Users       db.Bucket = "auth-users"
+)
+
+type User struct {
+	Email string    `json:"email",omitempty"`
+	Salt  util.Salt `json:"salt,omitempty"`
+	Hash  util.Hash `json:"hash,omitempty"`
+	Key   util.Key  `json:"key",omitempty"`
 }
 
-func AuthUser(d db.DB, email, pwhash string) (util.Key, error) {
-	key, err := util.PwHashKey([]byte(pwhash))
-	if err != nil {
-		return nil, err
+func Buckets() []db.Bucket {
+	return []db.Bucket{
+		SessionKeys,
+		Users,
 	}
-	err = StoreKey(d, []byte(email), key)
+}
+
+func CreateUser(d db.DB, email, pwhash string) error {
+	seed := time.Now().String()
+	hash, salt := util.HashedAndSalt(pwhash, seed)
+	return db.StoreKeyValue(d, Users, b(email), User{
+		Email: email,
+		Salt:  salt,
+		Hash:  hash,
+	})
+}
+
+func Valid(d db.DB, email string, key util.Key) error {
+	userBytes, err := db.GetByKey(d, SessionKeys, []byte(email))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return []byte(key), nil
-}
+	if len(userBytes) == 0 {
+		return errors.UserNotFoundf("user %q not logged in", email)
+	}
 
-func StoreKey(d db.DB, email, pwhash []byte) error {
-	return d.Update(storeKey(email, pwhash))
-}
+	var k util.Key
+	err = json.Unmarshal(userBytes, &k)
+	if err != nil {
+		return err
+	}
 
-// TODO: Fixme!
-func storeKey(email, pwhash []byte) func(*bolt.Tx) error {
-	return func(*bolt.Tx) error {
+	if k == key {
 		return nil
 	}
+
+	return fmt.Errorf("bad key %q for user %q", key, email)
+}
+
+func LoginUser(d db.DB, email, pwhash string) (util.Key, error) {
+	// Get the hash and password for the email.
+	// util.CheckHashedPw(pw, salt, hash)
+	// if ok, then log in.
+	userBytes, err := db.GetByKey(d, Users, []byte(email))
+	if err != nil {
+		return "", err
+	}
+
+	if len(userBytes) == 0 {
+		return "", fmt.Errorf("no user for email %q", email)
+	}
+
+	var u User
+	err = json.Unmarshal(userBytes, &u)
+	if err != nil {
+		return "", err
+	}
+
+	ok := util.CheckHashedPw(pwhash, u.Salt, u.Hash)
+	if !ok {
+		return "", fmt.Errorf("invalid password")
+	}
+
+	key := util.SaltedHash(pwhash, time.Now().String())
+	err = db.StoreKeyValue(d, SessionKeys, b(email), key)
+	if err != nil {
+		return "", err
+	}
+
+	return key, nil
 }
