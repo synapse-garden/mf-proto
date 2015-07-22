@@ -32,6 +32,15 @@ func Buckets() []db.Bucket {
 }
 
 func CreateUser(d db.DB, email, pwhash string) error {
+	userBytes, err := db.GetByKey(d, Users, []byte(email))
+	if err != nil {
+		return err
+	}
+
+	if len(userBytes) != 0 {
+		return errors.AlreadyExistsf("user for email %q", email)
+	}
+
 	seed := time.Now().String()
 	hash, salt := util.HashedAndSalt(pwhash, seed)
 	return db.StoreKeyValue(d, Users, b(email), User{
@@ -39,6 +48,26 @@ func CreateUser(d db.DB, email, pwhash string) error {
 		Salt:  salt,
 		Hash:  hash,
 	})
+}
+
+func DeleteUser(d db.DB, email string) error {
+	userBytes, err := db.GetByKey(d, Users, []byte(email))
+	if err != nil {
+		return err
+	}
+
+	if len(userBytes) != 0 {
+		err := db.DeleteByKey(d, Users, b(email))
+		if err != nil {
+			return errors.Annotatef(err, "failed to delete user %q", email)
+		}
+	}
+
+	err = db.DeleteByKey(d, SessionKeys, b(email))
+	if err != nil {
+		return errors.Annotatef(err, "failed to log out deleted user %q", email)
+	}
+	return nil
 }
 
 func Valid(d db.DB, email string, key util.Key) error {
@@ -62,6 +91,20 @@ func Valid(d db.DB, email string, key util.Key) error {
 	}
 
 	return fmt.Errorf("bad key %q for user %q", key, email)
+}
+
+func LogoutUser(d db.DB, email string, key util.Key) error {
+	err := Valid(d, email, key)
+	if err != nil {
+		return err
+	}
+
+	err = db.DeleteByKey(d, SessionKeys, b(email))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func LoginUser(d db.DB, email, pwhash string) (util.Key, error) {
