@@ -13,15 +13,21 @@ import (
 type b []byte
 
 const (
-	SessionKeys db.Bucket = "auth-session-keys"
-	Users       db.Bucket = "auth-users"
+	SessionKeys db.Bucket     = "auth-session-keys"
+	Users       db.Bucket     = "auth-users"
+	Timeout     time.Duration = time.Duration(5) * time.Minute
 )
 
 type User struct {
-	Email string    `json:"email",omitempty"`
+	Email string    `json:"email,omitempty"`
 	Salt  util.Salt `json:"salt,omitempty"`
 	Hash  util.Hash `json:"hash,omitempty"`
-	Key   util.Key  `json:"key",omitempty"`
+	Key   util.Key  `json:"key,omitempty"`
+}
+
+type Login struct {
+	Key     util.Key  `json:"key,omitempty"`
+	Timeout time.Time `json:"timeout,omitempty"`
 }
 
 func Buckets() []db.Bucket {
@@ -80,14 +86,19 @@ func Valid(d db.DB, email string, key util.Key) error {
 		return errors.UserNotFoundf("user %q not logged in", email)
 	}
 
-	var k util.Key
-	err = json.Unmarshal(userBytes, &k)
+	var login Login
+	err = json.Unmarshal(userBytes, &login)
 	if err != nil {
 		return err
 	}
 
-	if k == key {
-		return nil
+	if login.Key == key {
+		t := time.Now()
+		if t.Before(login.Timeout) {
+			err = db.StoreKeyValue(d, SessionKeys, b(email), Login{key, t.Add(Timeout)})
+			return nil
+		}
+		return errors.NotValidf("user %q timed out", email)
 	}
 
 	return fmt.Errorf("bad key %q for user %q", key, email)
@@ -132,7 +143,8 @@ func LoginUser(d db.DB, email, pwhash string) (util.Key, error) {
 	}
 
 	key := util.SaltedHash(pwhash, time.Now().String())
-	err = db.StoreKeyValue(d, SessionKeys, b(email), key)
+	timeout := time.Now().Add(Timeout)
+	err = db.StoreKeyValue(d, SessionKeys, b(email), Login{key, timeout})
 	if err != nil {
 		return "", err
 	}
