@@ -64,7 +64,6 @@ func GetByKey(d DB, bucket Bucket, key []byte) ([]byte, error) {
 			return BucketNotFoundErr(bucket)
 		}
 		result = b.Get(key)
-		// copy(result, b.Get(key))
 		return nil
 	})
 

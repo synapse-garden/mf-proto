@@ -1,2 +1,3 @@
  - Testing HTTPS methods
  - Testing DB methods
+ - Move user creation / deletion to privileged API
