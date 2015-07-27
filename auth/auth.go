@@ -3,6 +3,7 @@ package auth
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/juju/errors"
@@ -13,10 +14,26 @@ import (
 type b []byte
 
 const (
-	SessionKeys db.Bucket     = "auth-session-keys"
-	Users       db.Bucket     = "auth-users"
-	Timeout     time.Duration = time.Duration(5) * time.Minute
+	SessionKeys db.Bucket = "auth-session-keys"
+	Users       db.Bucket = "auth-users"
 )
+
+var timeout = struct {
+	t time.Duration
+	sync.RWMutex
+}{t: time.Duration(5) * time.Minute}
+
+func GetTimeout() time.Duration {
+	timeout.RLock()
+	defer timeout.RUnlock()
+	return timeout.t
+}
+
+func SetTimeout(t time.Duration) {
+	timeout.Lock()
+	defer timeout.Unlock()
+	timeout.t = t
+}
 
 type User struct {
 	Email string    `json:"email,omitempty"`
@@ -62,11 +79,13 @@ func DeleteUser(d db.DB, email string) error {
 		return err
 	}
 
-	if len(userBytes) != 0 {
-		err := db.DeleteByKey(d, Users, b(email))
-		if err != nil {
-			return errors.Annotatef(err, "failed to delete user %q", email)
-		}
+	if len(userBytes) == 0 {
+		return errors.Errorf("user for email %q not found", email)
+	}
+
+	err = db.DeleteByKey(d, Users, b(email))
+	if err != nil {
+		return errors.Annotatef(err, "failed to delete user %q", email)
 	}
 
 	err = db.DeleteByKey(d, SessionKeys, b(email))
@@ -95,7 +114,7 @@ func Valid(d db.DB, email string, key util.Key) error {
 	if login.Key == key {
 		t := time.Now()
 		if t.Before(login.Timeout) {
-			err = db.StoreKeyValue(d, SessionKeys, b(email), Login{key, t.Add(Timeout)})
+			err = db.StoreKeyValue(d, SessionKeys, b(email), Login{key, t.Add(GetTimeout())})
 			return nil
 		}
 		return errors.NotValidf("user %q timed out", email)
@@ -143,7 +162,7 @@ func LoginUser(d db.DB, email, pwhash string) (util.Key, error) {
 	}
 
 	key := util.SaltedHash(pwhash, time.Now().String())
-	timeout := time.Now().Add(Timeout)
+	timeout := time.Now().Add(GetTimeout())
 	err = db.StoreKeyValue(d, SessionKeys, b(email), Login{key, timeout})
 	if err != nil {
 		return "", err

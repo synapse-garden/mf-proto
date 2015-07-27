@@ -10,7 +10,7 @@ go get launchpad.net/godeps
 go get github.com/synapse-garden/mf-proto
 cd "${GOPATH}/github.com/synapse-garden/mf-proto"
 godeps -u dependencies.tsv
-go build ./...
+go test ./...
 ```
 
 # [TODO](TODO.md)

@@ -1,39 +1,92 @@
 package testing
 
 import (
-	"fmt"
+	"os"
 
 	"github.com/boltdb/bolt"
+	"github.com/juju/errors"
+	"github.com/synapse-garden/mf-proto/db"
 )
 
 // Fulfills db.DB
 type TestingDB struct {
-	giveError error
-	log       []string
+	bolt.DB
+	filename    string
+	updateError error
+	viewError   error
 }
 
-type setupFunc func(t *TestingDB)
+type setupFunc func(*TestingDB) error
 
-func NewTestingDB(setup ...setupFunc) *TestingDB {
-	t := &TestingDB{nil, make([]string, 0)}
+func NewTestingDB(setup ...setupFunc) (*TestingDB, error) {
+	t := &TestingDB{}
 	for _, f := range setup {
-		f(t)
+		err := f(t)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return t
+	return t, nil
 }
 
-func Err(msg string, vals ...interface{}) setupFunc {
-	return func(t *TestingDB) {
-		t.giveError = fmt.Errorf(msg, vals...)
+func CleanupDB(t *TestingDB) error {
+	err := t.Close()
+	if err != nil {
+		return err
+	}
+
+	return os.Remove(t.filename)
+}
+
+func SetupBolt(name string) setupFunc {
+	return func(t *TestingDB) error {
+		var err error
+		d, err := bolt.Open(name, 0600, nil)
+		if err != nil {
+			return err
+		}
+		t.filename = name
+		t.DB = *d
+		return nil
+	}
+}
+
+func SetupBuckets(buckets ...[]db.Bucket) setupFunc {
+	return func(t *TestingDB) error {
+		for _, bs := range buckets {
+			err := db.SetupBuckets(t, bs)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
+
+func SetupUpdateErr(msg string, vals ...interface{}) setupFunc {
+	return func(t *TestingDB) error {
+		t.updateError = errors.Errorf(msg, vals...)
+		return nil
+	}
+}
+
+func SetupViewErr(msg string, vals ...interface{}) setupFunc {
+	return func(t *TestingDB) error {
+		t.viewError = errors.Errorf(msg, vals...)
+		return nil
 	}
 }
 
 func (t *TestingDB) Update(fn func(*bolt.Tx) error) error {
-	t.log = append(t.log, "Update")
-	return nil
+	if t.updateError != nil {
+		return t.updateError
+	}
+	return t.DB.Update(fn)
 }
 
 func (t *TestingDB) View(fn func(*bolt.Tx) error) error {
-	t.log = append(t.log, "View")
-	return nil
+	if t.viewError != nil {
+		return t.viewError
+	}
+	return t.DB.View(fn)
 }
