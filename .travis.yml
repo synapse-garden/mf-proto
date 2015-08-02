@@ -4,7 +4,6 @@ install:
 - go get github.com/boltdb/bolt
 - go get github.com/juju/errors
 - go get github.com/julienschmidt/httprouter
-- go get github.com/segmentio/go-log
 - go get gopkg.in/check.v1
 script:
 - go test -v ./...

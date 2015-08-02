@@ -41,6 +41,19 @@ func CleanupDB(t *TestingDB) error {
 func SetupBolt(name string) setupFunc {
 	return func(t *TestingDB) error {
 		var err error
+		if f, err := os.Open(name); err != nil {
+			if !os.IsNotExist(err) {
+				return err
+			}
+		} else {
+			if err = f.Close(); err != nil {
+				return err
+			}
+			if err := os.Remove(name); err != nil {
+				return err
+			}
+		}
+
 		d, err := bolt.Open(name, 0600, nil)
 		if err != nil {
 			return err

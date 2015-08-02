@@ -3,31 +3,31 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/juju/errors"
 	htr "github.com/julienschmidt/httprouter"
-	"github.com/segmentio/go-log"
 )
 
 // API defines how a new API will be attached to the router.
 // api packages should export a function such as:
 //
 // func Auth(d db.DB) API {
-//	return func(r *htr.Router) {
+//	return func(r *htr.Router) error {
 // 		r.GET("/user/auth", handleAuth(d))
 //	}
 // }
 type API func(*htr.Router) error
 
-func SetupRoutes(r *htr.Router, apis ...API) error {
+func Routes(apis ...API) (*htr.Router, error) {
+	r := htr.New()
 	for _, a := range apis {
-		err := a(r)
-		if err != nil {
-			return err
+		if err := a(r); err != nil {
+			return nil, err
 		}
 	}
-	return nil
+	return r, nil
 }
 
 type apiError struct {
@@ -53,7 +53,7 @@ func WriteResponse(w http.ResponseWriter, values ...interface{}) {
 	response := newResponse(values...)
 	if err := e.Encode(response); err != nil {
 		code := http.StatusInternalServerError
-		log.Error("failed to write response", err)
+		log.Printf("failed to write response: %s", err.Error())
 		http.Error(
 			w,
 			newFatalResponse("failed to write response", code),
