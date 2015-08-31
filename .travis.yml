@@ -1,13 +1,14 @@
 language: go
-
 go: tip
-
-install: 
-  - go get github.com/boltdb/bolt
-  - go get github.com/juju/errors
-  - go get github.com/julienschmidt/httprouter
-  - go get github.com/segmentio/go-log
-  - go get gopkg.in/check.v1
-
+install:
+- go get github.com/boltdb/bolt
+- go get github.com/juju/errors
+- go get github.com/julienschmidt/httprouter
+- go get github.com/segmentio/go-log
+- go get gopkg.in/check.v1
 script:
-  - go test -v ./...
+- go test -v ./...
+notifications:
+  slack:
+    rooms:
+      secure: XxDnor6VCy8myK9ymeaYYdQYg8kHYuRcerjQreALidgJORoV15hy/PRx0oj1sAjvti0WxWq7F9rSEO9T2PhqaB9MZd84OkltZcoz/ud2/T9KOCw+2R+WwPgVFXd3cLYTO94h6pq7rP2S/ahtPRjkO7WALlQnPyIJiHYln6Rl1yI=
