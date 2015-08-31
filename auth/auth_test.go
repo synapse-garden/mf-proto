@@ -312,3 +312,8 @@ func (s *AuthSuite) logoutTests(user t.TestUser, key util.Key, login bool, c *gc
 	c.Assert(err, gc.ErrorMatches, fmt.Sprintf("user %q not logged in user not found", user.Email))
 	return nil
 }
+
+func (s *AuthSuite) TestFoo(c *gc.C) {
+	c.Assert(5, gc.Equals, 5)
+	c.Assert(5, gc.Equals, 6)
+}
