@@ -10,5 +10,4 @@ script:
 - go test -v ./...
 notifications:
   slack:
-    rooms:
-      secure: XxDnor6VCy8myK9ymeaYYdQYg8kHYuRcerjQreALidgJORoV15hy/PRx0oj1sAjvti0WxWq7F9rSEO9T2PhqaB9MZd84OkltZcoz/ud2/T9KOCw+2R+WwPgVFXd3cLYTO94h6pq7rP2S/ahtPRjkO7WALlQnPyIJiHYln6Rl1yI=
+    secure: HUdnVoynzjMKvsSH4hkJ494BpHlDQ9ReifLlCsu+5rpxt85PTSbKn7/IpGT692mox2x9gG/JgiMu5Ob0FyVVubO1I9D6onxHbH4GkPjJ8FfV90tNnk2tFmQbCaZGBmYX4LuC9iBxz53eQF4kbbnrhJ84nqM88i+RvMuIYgo6r7c=
