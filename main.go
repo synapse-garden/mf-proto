@@ -16,7 +16,8 @@ import (
 )
 
 type Command struct {
-	command, args string
+    command string
+    args []string
 }
 
 func main() {
@@ -40,8 +41,7 @@ func cliAdmin() {
 	commands := map[string]*regexp.Regexp{"quit": regexp.MustCompile("quit|exit|bye")}
 
 	for command := range inputCommands {
-		args, command := command.args, command.command
-		_ = args // go die, compiler
+		_, command := command.args, command.command
 		switch {
 		case commands["quit"].MatchString(command):
 			log.Printf("exiting program")
@@ -63,11 +63,11 @@ func readCommands(waitC chan struct{}, c chan Command) {
 		}
 
 		parts := strings.Split(command, " ")
-		command, args := parts[0], strings.Join(parts[1:], " ")
+		command, args := parts[0], parts[1:]
 		commandStruct := Command{command: command, args: args}
 
 		c <- commandStruct
-		<-waitC
+		<- waitC
 	}
 }
 
