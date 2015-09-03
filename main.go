@@ -56,5 +56,5 @@ func runHTTPListeners(d db.DB) {
 	case e = <-httpErr:
 	case e = <-httpsErr:
 	}
-	log.Fatal("error serving http(s): %s", e.Error())
+	log.Fatalf("error serving http(s): %s", e.Error())
 }
