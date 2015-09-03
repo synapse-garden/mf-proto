@@ -1,24 +1,15 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"regexp"
-	"strings"
 
 	"github.com/boltdb/bolt"
 	htr "github.com/julienschmidt/httprouter"
 	"github.com/synapse-garden/mf-proto/api"
+	"github.com/synapse-garden/mf-proto/cli"
 	"github.com/synapse-garden/mf-proto/db"
 )
-
-type Command struct {
-    command string
-    args []string
-}
 
 func main() {
 	d, err := bolt.Open("my.db", 0600, nil)
@@ -28,47 +19,9 @@ func main() {
 	defer d.Close()
 
 	go runHTTPListeners(d)
+	go cli.Admin()
 
-	cliAdmin()
-}
-
-func cliAdmin() {
-	waitC := make(chan struct{})
-
-	inputCommands := make(chan Command)
-	go readCommands(waitC, inputCommands)
-
-	commands := map[string]*regexp.Regexp{"quit": regexp.MustCompile("quit|exit|bye")}
-
-	for command := range inputCommands {
-		_, command := command.args, command.command
-		switch {
-		case commands["quit"].MatchString(command):
-			log.Printf("exiting program")
-			os.Exit(0)
-		default:
-			log.Printf("invalid command %s", command)
-		}
-		waitC <- struct{}{}
-	}
-}
-
-func readCommands(waitC chan struct{}, c chan Command) {
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Print("> ")
-		command, err := reader.ReadString('\n')
-		if err != nil {
-			log.Panic(err)
-		}
-
-		parts := strings.Split(command, " ")
-		command, args := parts[0], parts[1:]
-		commandStruct := Command{command: command, args: args}
-
-		c <- commandStruct
-		<- waitC
-	}
+	select {}
 }
 
 func runHTTPListeners(d db.DB) {
