@@ -18,7 +18,7 @@ type Command struct {
 
 //Response -
 type Response string
-type commandFunc func(...interface{}) (Response, error)
+type commandFunc func(...string) (Response, error)
 
 var availableCommands = make(map[string]*Command)
 var commandMap = make(map[string]*Command)
@@ -82,7 +82,7 @@ func Admin() {
 			action, _ = MatchCommand("help")
 		}
 
-		response, err := action.Fn(args)
+		response, err := action.Fn(args...)
 		if err != nil {
 			log.Print(err)
 		}
@@ -106,7 +106,7 @@ func readCommands(waitC chan struct{}, c chan string) {
 	}
 }
 
-func help(...interface{}) (Response, error) {
+func help(args ...string) (Response, error) {
 	usage := bytes.NewBufferString("Usage:\n")
 
 	for name, command := range availableCommands {
@@ -116,7 +116,7 @@ func help(...interface{}) (Response, error) {
 	return Response(usage.String()), nil
 }
 
-func quit(...interface{}) (Response, error) {
+func quit(args ...string) (Response, error) {
 	log.Print("Bye!")
 	os.Exit(0)
 	return "", nil
