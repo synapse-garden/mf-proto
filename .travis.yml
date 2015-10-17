@@ -5,6 +5,8 @@ install:
 - go get github.com/juju/errors
 - go get github.com/julienschmidt/httprouter
 - go get gopkg.in/check.v1
+- go get gopkg.in/readline.v1
+- go get github.com/juju/testing
 script:
 - go test -v ./...
 notifications:

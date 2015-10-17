@@ -9,9 +9,9 @@ import (
 	"github.com/synapse-garden/mf-proto/cli"
 	"github.com/synapse-garden/mf-proto/db"
 	"github.com/synapse-garden/mf-proto/util"
-	"gopkg.in/readline.v1"
 
 	"github.com/juju/errors"
+	"gopkg.in/readline.v1"
 )
 
 func AdminCLI(d db.DB) cli.Binding {
