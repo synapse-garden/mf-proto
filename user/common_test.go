@@ -15,7 +15,7 @@ import (
 func Test(t *testing.T) { gc.TestingT(t) }
 
 type UserSuite struct {
-	d     *t.TestingDB
+	d     *t.DB
 	users map[string]t.TestUser
 }
 
@@ -26,7 +26,7 @@ func timeout(t int) time.Duration {
 }
 
 func (s *UserSuite) SetUpTest(c *gc.C) {
-	d, err := t.NewTestingDB(
+	d, err := t.NewDB(
 		t.SetupBolt("test.db"),
 		t.SetupBuckets(user.Buckets()),
 	)
