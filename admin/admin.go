@@ -11,17 +11,19 @@ import (
 )
 
 const (
-	Admins db.Bucket = "admin-admins"
-	Emails db.Bucket = "admin-emails"
+	admins db.Bucket = "admin-admins"
+	emails db.Bucket = "admin-emails"
 )
 
+// Buckets gets the Buckets for admin.
 func Buckets() []db.Bucket {
 	return []db.Bucket{
-		Admins,
-		Emails,
+		admins,
+		emails,
 	}
 }
 
+// Admin is a user as considered by the admin package.
 type Admin user.User
 
 // IsAdmin returns nil if there exists an Admin for the given util.Key.
@@ -44,45 +46,45 @@ func IsAdminEmail(d db.DB, email string) error {
 
 // Get retrieves an *Admin from the database for a given key.
 func Get(d db.DB, key util.Key) (*Admin, error) {
-	adminJson, err := db.GetByKey(d, Admins, []byte(key))
+	adminJSON, err := db.GetByKey(d, admins, []byte(key))
 
 	switch {
 	case err != nil:
 		return nil, err
-	case len(adminJson) == 0:
+	case len(adminJSON) == 0:
 		return nil, errors.UserNotFoundf("admin for key %s:", key)
 	}
 
 	admin := new(Admin)
-	err = json.Unmarshal(adminJson, admin)
+	err = json.Unmarshal(adminJSON, admin)
 	return admin, err
 }
 
 // GetByEmail retrieves an *Admin from the database for a given email.
 func GetByEmail(d db.DB, email string) (*Admin, error) {
-	adminJson, err := db.GetByKey(d, Emails, []byte(email))
+	adminJSON, err := db.GetByKey(d, emails, []byte(email))
 
 	switch {
 	case err != nil:
 		return nil, err
-	case len(adminJson) == 0:
+	case len(adminJSON) == 0:
 		return nil, errors.UserNotFoundf("admin for email %s:", email)
 	}
 
 	admin := new(Admin)
-	err = json.Unmarshal(adminJson, admin)
+	err = json.Unmarshal(adminJSON, admin)
 	return admin, err
 }
 
-// CreateAdmin makes a new Admin account with a given email and pwhash.
+// Create makes a new Admin account with a given email and pwhash.
 func Create(d db.DB, email, pwhash string) (util.Key, error) {
 	var none util.Key
-	adminJson, err := db.GetByKey(d, Emails, []byte(email))
+	adminJSON, err := db.GetByKey(d, emails, []byte(email))
 
 	switch {
 	case err != nil:
 		return none, err
-	case len(adminJson) != 0:
+	case len(adminJSON) != 0:
 		return none, errors.AlreadyExistsf("admin for email %s:", email)
 	}
 
@@ -97,34 +99,34 @@ func Create(d db.DB, email, pwhash string) (util.Key, error) {
 		Key:   key,
 	}
 
-	if err := db.StoreKeyValue(d, Admins, []byte(key), adm); err != nil {
+	if err := db.StoreKeyValue(d, admins, []byte(key), adm); err != nil {
 		return none, err
 	}
 
-	return key, db.StoreKeyValue(d, Emails, []byte(email), adm)
+	return key, db.StoreKeyValue(d, emails, []byte(email), adm)
 }
 
 // Delete deletes the admin which has the given key.
 func Delete(d db.DB, key util.Key) error {
-	adminJson, err := db.GetByKey(d, Admins, []byte(key))
+	adminJSON, err := db.GetByKey(d, admins, []byte(key))
 
 	switch {
 	case err != nil:
 		return err
-	case len(adminJson) == 0:
+	case len(adminJSON) == 0:
 		return errors.UserNotFoundf("admin for key %s:", key)
 	}
 
 	adm := new(Admin)
-	if err := json.Unmarshal(adminJson, adm); err != nil {
+	if err := json.Unmarshal(adminJSON, adm); err != nil {
 		return err
 	}
 
-	if err := db.DeleteByKey(d, Admins, []byte(key)); err != nil {
+	if err := db.DeleteByKey(d, admins, []byte(key)); err != nil {
 		return err
 	}
 
-	return db.DeleteByKey(d, Emails, []byte(adm.Email))
+	return db.DeleteByKey(d, emails, []byte(adm.Email))
 }
 
 // DeleteByEmail deletes the admin which has the given email.
@@ -134,9 +136,9 @@ func DeleteByEmail(d db.DB, email string) error {
 		return err
 	}
 
-	if err := db.DeleteByKey(d, Admins, []byte(adm.Key)); err != nil {
+	if err := db.DeleteByKey(d, admins, []byte(adm.Key)); err != nil {
 		return err
 	}
 
-	return db.DeleteByKey(d, Emails, []byte(email))
+	return db.DeleteByKey(d, emails, []byte(email))
 }

@@ -17,14 +17,14 @@ import (
 func Test(t *testing.T) { gc.TestingT(t) }
 
 type AdminSuite struct {
-	d      db.DB
+	d      *t.DB
 	admins map[string]t.TestAdmin
 }
 
 var _ = gc.Suite(&AdminSuite{})
 
 func (s *AdminSuite) SetUpTest(c *gc.C) {
-	d, err := t.NewTestingDB(
+	d, err := t.NewDB(
 		t.SetupBolt("test.db"),
 		t.SetupBuckets(admin.Buckets()),
 	)
@@ -60,7 +60,8 @@ func (s *AdminSuite) deleteAdmins(c *gc.C) {
 }
 
 func (s *AdminSuite) TearDownTest(c *gc.C) {
-
+	s.admins = nil
+	c.Assert(t.CleanupDB(s.d), jc.ErrorIsNil)
 }
 
 func (s *AdminSuite) TestCreate(c *gc.C) {
@@ -238,5 +239,41 @@ func (s *AdminSuite) deleteTests(adm t.TestAdmin, c *gc.C) error {
 
 	err := admin.IsAdmin(s.d, adm.Key)
 	c.Assert(err, gc.ErrorMatches, fmt.Sprintf("admin for key %s: user not found", adm.Key))
+	return nil
+}
+
+func (s *AdminSuite) TestDeleteByEmail(c *gc.C) {
+	s.createAdmins(c)
+
+	for i, t := range []struct {
+		should      string
+		admin       t.TestAdmin
+		expectError string
+	}{{
+		should: "delete an admin",
+		admin:  s.admins["bob"],
+	}, {
+		should:      "not delete a nonexistent admin",
+		admin:       t.TestAdmin{Email: "foo"},
+		expectError: `admin for email foo: user not found`,
+	}} {
+		c.Logf("test %d: should %s", i, t.should)
+
+		if t.expectError == "" {
+			c.Check(s.deleteByEmailTests(t.admin, c), jc.ErrorIsNil)
+		} else {
+			c.Check(s.deleteByEmailTests(t.admin, c), gc.ErrorMatches, t.expectError)
+		}
+	}
+}
+
+func (s *AdminSuite) deleteByEmailTests(adm t.TestAdmin, c *gc.C) error {
+	if err := admin.DeleteByEmail(s.d, adm.Email); err != nil {
+		c.Logf("failed to delete admin %q", adm.Email)
+		return err
+	}
+
+	err := admin.IsAdminEmail(s.d, adm.Email)
+	c.Assert(err, gc.ErrorMatches, fmt.Sprintf("admin for email %s: user not found", adm.Email))
 	return nil
 }
