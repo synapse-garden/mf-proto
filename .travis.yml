@@ -1,14 +1,11 @@
 language: go
 go: tip
 install:
-- go get github.com/boltdb/bolt
-- go get github.com/juju/errors
-- go get github.com/julienschmidt/httprouter
+- go get github.com/tools/godep
+- go get github.com/juju/testing/checkers
 - go get gopkg.in/check.v1
-- go get gopkg.in/readline.v1
-- go get github.com/juju/testing
 script:
-- go test -v ./...
+- godep go test -v ./...
 notifications:
   slack:
     secure: HUdnVoynzjMKvsSH4hkJ494BpHlDQ9ReifLlCsu+5rpxt85PTSbKn7/IpGT692mox2x9gG/JgiMu5Ob0FyVVubO1I9D6onxHbH4GkPjJ8FfV90tNnk2tFmQbCaZGBmYX4LuC9iBxz53eQF4kbbnrhJ84nqM88i+RvMuIYgo6r7c=
