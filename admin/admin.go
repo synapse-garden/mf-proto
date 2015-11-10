@@ -11,15 +11,15 @@ import (
 )
 
 const (
-	admins db.Bucket = "admin-admins"
-	emails db.Bucket = "admin-emails"
+	Admins db.Bucket = "admin-admins"
+	Emails db.Bucket = "admin-emails"
 )
 
 // Buckets gets the Buckets for admin.
 func Buckets() []db.Bucket {
 	return []db.Bucket{
-		admins,
-		emails,
+		Admins,
+		Emails,
 	}
 }
 
@@ -46,7 +46,7 @@ func IsAdminEmail(d db.DB, email string) error {
 
 // Get retrieves an *Admin from the database for a given key.
 func Get(d db.DB, key util.Key) (*Admin, error) {
-	adminJSON, err := db.GetByKey(d, admins, []byte(key))
+	adminJSON, err := db.GetByKey(d, Admins, []byte(key))
 
 	switch {
 	case err != nil:
@@ -62,7 +62,7 @@ func Get(d db.DB, key util.Key) (*Admin, error) {
 
 // GetByEmail retrieves an *Admin from the database for a given email.
 func GetByEmail(d db.DB, email string) (*Admin, error) {
-	adminJSON, err := db.GetByKey(d, emails, []byte(email))
+	adminJSON, err := db.GetByKey(d, Emails, []byte(email))
 
 	switch {
 	case err != nil:
@@ -79,7 +79,7 @@ func GetByEmail(d db.DB, email string) (*Admin, error) {
 // Create makes a new Admin account with a given email and pwhash.
 func Create(d db.DB, email, pwhash string) (util.Key, error) {
 	var none util.Key
-	adminJSON, err := db.GetByKey(d, emails, []byte(email))
+	adminJSON, err := db.GetByKey(d, Emails, []byte(email))
 
 	switch {
 	case err != nil:
@@ -99,16 +99,16 @@ func Create(d db.DB, email, pwhash string) (util.Key, error) {
 		Key:   key,
 	}
 
-	if err := db.StoreKeyValue(d, admins, []byte(key), adm); err != nil {
+	if err := db.StoreKeyValue(d, Admins, []byte(key), adm); err != nil {
 		return none, err
 	}
 
-	return key, db.StoreKeyValue(d, emails, []byte(email), adm)
+	return key, db.StoreKeyValue(d, Emails, []byte(email), adm)
 }
 
 // Delete deletes the admin which has the given key.
 func Delete(d db.DB, key util.Key) error {
-	adminJSON, err := db.GetByKey(d, admins, []byte(key))
+	adminJSON, err := db.GetByKey(d, Admins, []byte(key))
 
 	switch {
 	case err != nil:
@@ -122,11 +122,11 @@ func Delete(d db.DB, key util.Key) error {
 		return err
 	}
 
-	if err := db.DeleteByKey(d, admins, []byte(key)); err != nil {
+	if err := db.DeleteByKey(d, Admins, []byte(key)); err != nil {
 		return err
 	}
 
-	return db.DeleteByKey(d, emails, []byte(adm.Email))
+	return db.DeleteByKey(d, Emails, []byte(adm.Email))
 }
 
 // DeleteByEmail deletes the admin which has the given email.
@@ -136,9 +136,9 @@ func DeleteByEmail(d db.DB, email string) error {
 		return err
 	}
 
-	if err := db.DeleteByKey(d, admins, []byte(adm.Key)); err != nil {
+	if err := db.DeleteByKey(d, Admins, []byte(adm.Key)); err != nil {
 		return err
 	}
 
-	return db.DeleteByKey(d, emails, []byte(email))
+	return db.DeleteByKey(d, Emails, []byte(email))
 }
