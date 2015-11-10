@@ -6,6 +6,7 @@ import (
 
 	"github.com/juju/errors"
 	"github.com/synapse-garden/mf-proto/db"
+	"github.com/synapse-garden/mf-proto/object"
 	"github.com/synapse-garden/mf-proto/util"
 )
 
@@ -58,14 +59,18 @@ func Delete(d db.DB, email string) error {
 		return errors.Errorf("user for email %q not found", email)
 	}
 
-	err = db.DeleteByKey(d, Users, []byte(email))
-	if err != nil {
+	if err = db.DeleteByKey(d, Users, []byte(email)); err != nil {
 		return errors.Annotatef(err, "failed to delete user %q", email)
+	}
+
+	if err = object.DeleteAll(d, email); err != nil {
+		return errors.Annotatef(err, "failed to clear objects for user %q", email)
 	}
 
 	if _, err := GetLogin(d, email); err == nil {
 		return ClearLogin(d, email)
 	}
+
 	return nil
 }
 

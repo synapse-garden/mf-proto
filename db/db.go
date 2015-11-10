@@ -7,6 +7,8 @@ import (
 	"github.com/juju/errors"
 )
 
+// DB specifies the basic methods that a database must implement to be used as
+// a backend.
 type DB interface {
 	// Begin(writable bool) (*bolt.Tx, error)
 	// Close() error
@@ -19,12 +21,15 @@ type DB interface {
 	View(fn func(*bolt.Tx) error) error
 }
 
+// Bucket is a named database partition.
 type Bucket string
 
+// BucketNotFoundErr indicates that the given Bucket was not yet created.
 func BucketNotFoundErr(b Bucket) error {
 	return errors.NotFoundf("bucket %q not found", b)
 }
 
+// SetupBuckets creates the given Buckets if they do not already exist in d.
 func SetupBuckets(d DB, buckets []Bucket) error {
 	return d.Update(func(tx *bolt.Tx) error {
 		for _, bucket := range buckets {
@@ -37,6 +42,8 @@ func SetupBuckets(d DB, buckets []Bucket) error {
 	})
 }
 
+// StoreKeyValue marshals the given value as JSON and stores it in d at the
+// given key.
 func StoreKeyValue(d DB, bucket Bucket, key []byte, value interface{}) error {
 	vBytes, err := json.Marshal(value)
 	if err != nil {
@@ -55,6 +62,7 @@ func StoreKeyValue(d DB, bucket Bucket, key []byte, value interface{}) error {
 	})
 }
 
+// GetByKey retrieves the value stored in d with the given key.
 func GetByKey(d DB, bucket Bucket, key []byte) ([]byte, error) {
 	var result []byte
 
@@ -74,6 +82,8 @@ func GetByKey(d DB, bucket Bucket, key []byte) ([]byte, error) {
 	return result, nil
 }
 
+// DeleteByKey deletes the value stored with the given key from d.  If key is
+// not found, the error returned will be nil.
 func DeleteByKey(d DB, bucket Bucket, key []byte) error {
 	return d.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucket))
