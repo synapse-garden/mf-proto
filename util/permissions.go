@@ -7,10 +7,19 @@ type Permissions struct {
 	Owner string
 }
 
-// Authorized determines if a given user is authorized.
-func (p *Permissions) Authorized(email string) error {
+// ReadAuthorized determines if a given user is read authorized.
+func (p *Permissions) ReadAuthorized(email string) error {
 	if p.Owner != email {
-		return errors.Unauthorizedf("user %q not authorized", email)
+		return errors.Unauthorizedf("user %q not read authorized", email)
+	}
+
+	return nil
+}
+
+// WriteAuthorized determines if a given user is write authorized.
+func (p *Permissions) WriteAuthorized(email string) error {
+	if p.Owner != email {
+		return errors.Unauthorizedf("user %q not write authorized", email)
 	}
 
 	return nil
