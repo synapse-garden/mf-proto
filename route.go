@@ -44,6 +44,7 @@ func runHTTPListeners(d db.DB) {
 	httpsMux, err := api.Routes(
 		api.Admin(d),
 		api.User(d),
+		api.Object(d),
 		api.Task(d),
 	)
 	if err != nil {
