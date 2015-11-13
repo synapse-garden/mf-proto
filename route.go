@@ -12,7 +12,7 @@ import (
 
 const sourceDoc = `---     S Y N A P S E G A R D E N     ---
 
-            MF-Proto v0.1.0  
+            MF-Proto v0.2.0  
          © SynapseGarden 2015
 
  Licensed under Affero GNU Public License
