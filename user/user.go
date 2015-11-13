@@ -6,7 +6,6 @@ import (
 
 	"github.com/juju/errors"
 	"github.com/synapse-garden/mf-proto/db"
-	"github.com/synapse-garden/mf-proto/object"
 	"github.com/synapse-garden/mf-proto/util"
 )
 
@@ -63,9 +62,8 @@ func Delete(d db.DB, email string) error {
 		return errors.Annotatef(err, "failed to delete user %q", email)
 	}
 
-	if err = object.DeleteAll(d, email); err != nil {
-		return errors.Annotatef(err, "failed to clear objects for user %q", email)
-	}
+	// TODO: figure out what to do with user's objects.  Delete?  What if
+	// another user has shared ownership?  What if an object is abandoned?
 
 	if _, err := GetLogin(d, email); err == nil {
 		return ClearLogin(d, email)

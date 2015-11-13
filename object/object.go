@@ -40,9 +40,14 @@ func New(json, user string) *Object {
 	}
 }
 
-// Authorized determines if a user is authorized to use an object.
-func (o *Object) Authorized(email string) error {
-	return o.Perms.Authorized(email)
+// ReadAuthorized determines if a user is authorized to use an object.
+func (o *Object) ReadAuthorized(email string) error {
+	return o.Perms.ReadAuthorized(email)
+}
+
+// WriteAuthorized determines if a user is authorized to write an object.
+func (o *Object) WriteAuthorized(email string) error {
+	return o.Perms.WriteAuthorized(email)
 }
 
 // Put stores an object by id for the given user, if the user is authorized.
@@ -52,12 +57,18 @@ func Put(d db.DB, email string, id util.Key, obj *Object) error {
 	switch {
 	case err != nil && errors.IsNotFound(err):
 		return db.StoreKeyValue(d, Objects, []byte(id), obj)
-	case err != nil:
-		return err
+	case err != nil && errors.IsUnauthorized(err):
+		return errors.Annotatef(err,
+			"user %q does not have read permissions for %s",
+			email, id,
+		)
 	}
 
-	if err := o.Authorized(email); err != nil {
-		return err
+	if err = o.WriteAuthorized(email); err != nil {
+		return errors.Annotatef(err,
+			"user %q does not have write permissions for %s",
+			email, id,
+		)
 	}
 
 	return db.StoreKeyValue(d, Objects, []byte(id), obj)
@@ -76,10 +87,12 @@ func Get(d db.DB, email string, id util.Key) (*Object, error) {
 
 	obj := new(Object)
 	if err := json.Unmarshal(objBytes, obj); err != nil {
-		return nil, errors.Annotatef(err, "unmarshaling %#q failed", objBytes)
+		return nil, errors.Annotatef(
+			err, "unmarshaling %#q failed", objBytes,
+		)
 	}
 
-	if err = obj.Authorized(email); err != nil {
+	if err = obj.ReadAuthorized(email); err != nil {
 		return nil, err
 	}
 
@@ -88,6 +101,31 @@ func Get(d db.DB, email string, id util.Key) (*Object, error) {
 
 // Delete deletes an object given a user and an Object id.
 func Delete(d db.DB, email string, id util.Key) error {
+	objBytes, err := db.GetByKey(d, Objects, []byte(id))
+	if err != nil {
+		return err
+	}
+
+	if len(objBytes) == 0 {
+		// Was already deleted, no problem
+		return nil
+	}
+
+	obj := new(Object)
+	if err := json.Unmarshal(objBytes, obj); err != nil {
+		return errors.Annotatef(
+			err, "unmarshaling %#q failed", objBytes,
+		)
+	}
+
+	if err = obj.ReadAuthorized(email); err != nil {
+		return err
+	}
+
+	if err = obj.WriteAuthorized(email); err != nil {
+		return err
+	}
+
 	return db.DeleteByKey(d, Objects, []byte(id))
 }
 

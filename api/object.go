@@ -1,9 +1,11 @@
 package api
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
+	"github.com/juju/errors"
 	htr "github.com/julienschmidt/httprouter"
 	"github.com/synapse-garden/mf-proto/db"
 	"github.com/synapse-garden/mf-proto/object"
@@ -44,7 +46,15 @@ func handleObjectPut(d db.DB) htr.Handle {
 		obj := object.New(r.Form.Get("json"), email)
 
 		if err := object.Put(d, email, id, obj); err != nil {
-			WriteResponse(w, newApiError(err.Error(), err))
+			if errors.IsNotValid(err) {
+				WriteResponse(w, newApiError(
+					fmt.Sprintf("bad JSON for object %s", id),
+					fmt.Errorf("bad JSON for object %s"),
+				))
+			} else {
+				WriteResponse(w, newApiError(err.Error(), err))
+			}
+
 			log.Printf(
 				"error storing object:\n  %s\n  %s",
 				id, err.Error(),
@@ -76,7 +86,14 @@ func handleObjectGet(d db.DB) htr.Handle {
 
 		obj, err := object.Get(d, email, id)
 		if err != nil {
-			WriteResponse(w, newApiError(err.Error(), err))
+			if errors.IsNotValid(err) {
+				WriteResponse(w, newApiError(
+					fmt.Sprintf("bad JSON for object %s", id),
+					fmt.Errorf("bad JSON for object %s", id),
+				))
+			} else {
+				WriteResponse(w, newApiError(err.Error(), err))
+			}
 			log.Printf("error fetching object: %#v", r)
 			return
 		}
@@ -104,7 +121,14 @@ func handleObjectDelete(d db.DB) htr.Handle {
 		id := ps.ByName("id")
 
 		if err := object.Delete(d, email, util.Key(id)); err != nil {
-			WriteResponse(w, newApiError(err.Error(), err))
+			if errors.IsNotValid(err) {
+				WriteResponse(w, newApiError(
+					fmt.Sprintf("bad JSON for object %s", id),
+					fmt.Errorf("bad JSON for object %s", id),
+				))
+			} else {
+				WriteResponse(w, newApiError(err.Error(), err))
+			}
 			log.Printf("error deleting object %s: %s", id, err.Error())
 			return
 		}

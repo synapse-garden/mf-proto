@@ -1,8 +1,10 @@
 package object_test
 
 import (
+	"encoding/json"
 	"testing"
 
+	"github.com/synapse-garden/mf-proto/db"
 	"github.com/synapse-garden/mf-proto/object"
 	mft "github.com/synapse-garden/mf-proto/testing"
 	"github.com/synapse-garden/mf-proto/util"
@@ -36,7 +38,7 @@ func (s *ObjectSuite) TearDownTest(c *gc.C) {
 	}
 }
 
-func (s *ObjectSuite) TestAuthorized(c *gc.C) {
+func (s *ObjectSuite) TestReadAuthorized(c *gc.C) {
 	for i, t := range []struct {
 		should             string
 		given              *object.Object
@@ -49,7 +51,7 @@ func (s *ObjectSuite) TestAuthorized(c *gc.C) {
 			Perms: util.Permissions{"joe"},
 		},
 		givenEmail:         "not-joe",
-		expectError:        `user "not-joe" not authorized`,
+		expectError:        `user "not-joe" not read authorized`,
 		expectUnauthorized: true,
 	}, {
 		should:     "accept an authorized user",
@@ -57,7 +59,38 @@ func (s *ObjectSuite) TestAuthorized(c *gc.C) {
 		givenEmail: "joe",
 	}} {
 		c.Logf("test %d: should %s", i, t.should)
-		err := t.given.Authorized(t.givenEmail)
+		err := t.given.ReadAuthorized(t.givenEmail)
+		if t.expectError != "" {
+			c.Check(err, gc.ErrorMatches, t.expectError)
+			c.Check(errors.IsUnauthorized(err), gc.Equals, t.expectUnauthorized)
+		} else {
+			c.Check(err, jc.ErrorIsNil)
+		}
+	}
+}
+
+func (s *ObjectSuite) TestWriteAuthorized(c *gc.C) {
+	for i, t := range []struct {
+		should             string
+		given              *object.Object
+		givenEmail         string
+		expectError        string
+		expectUnauthorized bool
+	}{{
+		should: "reject an unauthorized user",
+		given: &object.Object{
+			Perms: util.Permissions{"joe"},
+		},
+		givenEmail:         "not-joe",
+		expectError:        `user "not-joe" not write authorized`,
+		expectUnauthorized: true,
+	}, {
+		should:     "accept an authorized user",
+		given:      &object.Object{Perms: util.Permissions{"joe"}},
+		givenEmail: "joe",
+	}} {
+		c.Logf("test %d: should %s", i, t.should)
+		err := t.given.WriteAuthorized(t.givenEmail)
 		if t.expectError != "" {
 			c.Check(err, gc.ErrorMatches, t.expectError)
 			c.Check(errors.IsUnauthorized(err), gc.Equals, t.expectUnauthorized)
@@ -90,11 +123,21 @@ func (s *ObjectSuite) TestPut(c *gc.C) {
 		givenNewObject: object.New("bar", "joe"),
 		givenID:        "12345",
 	}, {
+		should: "not overwrite an object for new user",
+		givenExistingObjects: map[util.Key]*object.Object{
+			"12345": object.New("foo", "joe"),
+		},
+		givenUser:          "fred",
+		givenNewObject:     object.New("bar", "fred"),
+		givenID:            "12345",
+		expectError:        `user "fred" does not have read permissions for 12345: user "fred" not read authorized`,
+		expectUnauthorized: true,
+	}, {
 		should:             "not put a new object for an invalid user",
 		givenNewObject:     object.New("foo", "joe"),
 		givenUser:          "not-joe",
 		givenID:            "12345",
-		expectError:        `user "not-joe" not authorized`,
+		expectError:        `user "not-joe" does not have read permissions for 12345: user "not-joe" not read authorized`,
 		expectUnauthorized: true,
 	}} {
 		c.Logf("test %d: should %s", i, t.should)
@@ -105,7 +148,11 @@ func (s *ObjectSuite) TestPut(c *gc.C) {
 
 		if t.expectError != "" {
 			c.Check(err, gc.ErrorMatches, t.expectError)
-			c.Check(errors.IsUnauthorized(err), gc.Equals, t.expectUnauthorized)
+			c.Check(
+				errors.IsUnauthorized(err),
+				gc.Equals,
+				t.expectUnauthorized,
+			)
 			continue
 		}
 
@@ -119,12 +166,129 @@ func (s *ObjectSuite) TestPut(c *gc.C) {
 
 func (s *ObjectSuite) TestGet(c *gc.C) {
 	for i, t := range []struct {
-		should string
-	}{{}} {
+		should               string
+		givenExistingObjects map[util.Key]*object.Object
+		givenUser            string
+		givenID              string
+		expectObject         *object.Object
+		expectError          string
+		expectUnauthorized   bool
+	}{{
+		should: "get an object for a valid user",
+		givenExistingObjects: map[util.Key]*object.Object{
+			"12345": object.New("foo", "joe"),
+		},
+		givenUser:    "joe",
+		givenID:      "12345",
+		expectObject: object.New("foo", "joe"),
+	}, {
+		should: "not get an object if user has no read permissions",
+		givenExistingObjects: map[util.Key]*object.Object{
+			"12345": object.New("foo", "joe"),
+		},
+		givenUser:          "fred",
+		givenID:            "12345",
+		expectError:        `user "fred" not read authorized`,
+		expectUnauthorized: true,
+	}, {
+		should: "not get an object which does not exist",
+		givenExistingObjects: map[util.Key]*object.Object{
+			"12345": object.New("foo", "joe"),
+		},
+		givenUser:   "joe",
+		givenID:     "123456",
+		expectError: "object 123456 not found",
+	}} {
 		c.Logf("test %d: should %s", i, t.should)
+
+		mft.CreateObjects(s.d, t.givenExistingObjects)
+
+		obj, err := object.Get(s.d, t.givenUser, util.Key(t.givenID))
+
+		if t.expectError != "" {
+			c.Check(err, gc.ErrorMatches, t.expectError)
+			c.Check(
+				errors.IsUnauthorized(err),
+				gc.Equals,
+				t.expectUnauthorized,
+			)
+			continue
+		}
+
+		c.Assert(err, jc.ErrorIsNil)
+		c.Check(obj, jc.DeepEquals, t.expectObject)
 	}
 }
 
 func (s *ObjectSuite) TestDelete(c *gc.C) {
+	for i, t := range []struct {
+		should               string
+		givenExistingObjects map[util.Key]*object.Object
+		givenUser            string
+		givenID              string
+		expectError          string
+		expectUnauthorized   bool
+		expectObjects        map[util.Key]*object.Object
+	}{{
+		should: "delete an object for a valid user",
+		givenExistingObjects: map[util.Key]*object.Object{
+			"12345":  object.New("foo", "joe"),
+			"123456": object.New("foo", "joe"),
+		},
+		givenUser: "joe",
+		givenID:   "12345",
+	}, {
+		should: "not overwrite an object for someone else",
+		givenExistingObjects: map[util.Key]*object.Object{
+			"12345": object.New("foo", "joe"),
+		},
+		givenUser:          "fred",
+		givenID:            "12345",
+		expectError:        `user "fred" not read authorized`,
+		expectUnauthorized: true,
+	}} {
+		c.Logf("test %d: should %s", i, t.should)
 
+		mft.CreateObjects(s.d, t.givenExistingObjects)
+
+		err := object.Delete(s.d, t.givenUser, util.Key(t.givenID))
+
+		if t.expectError != "" {
+			c.Check(err, gc.ErrorMatches, t.expectError)
+			c.Check(
+				errors.IsUnauthorized(err),
+				gc.Equals,
+				t.expectUnauthorized,
+			)
+			continue
+		}
+
+		c.Assert(err, jc.ErrorIsNil)
+
+		// Make a map of expected objects minus the deleted one.
+		expectObjects := make(map[util.Key]*object.Object)
+		for id, obj := range t.givenExistingObjects {
+			expectObjects[id] = obj
+		}
+
+		delete(expectObjects, util.Key(t.givenID))
+
+		// Check the original objects to make sure the given ID was
+		// deleted.
+		for id, obj := range t.givenExistingObjects {
+			objBytes, err := db.GetByKey(s.d, object.Objects, []byte(id))
+			c.Assert(err, jc.ErrorIsNil)
+			if id == util.Key(t.givenID) {
+				// Make sure the given ID got deleted and is
+				// not found.
+				c.Check(len(objBytes), gc.Equals, 0)
+				continue
+			}
+
+			c.Assert(len(objBytes), gc.Not(gc.Equals), 0)
+			o := new(object.Object)
+			c.Assert(json.Unmarshal(objBytes, o), jc.ErrorIsNil)
+			c.Check(o, jc.DeepEquals, obj)
+		}
+	}
 }
