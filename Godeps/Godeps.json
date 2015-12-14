@@ -22,8 +22,20 @@
 			"Rev": "6aacfd5ab513e34f7e64ea9627ab9670371b34e7"
 		},
 		{
+			"ImportPath": "github.com/rs/cors",
+			"Rev": "ceb1fbf238d7711a11a86a2622d0b85305348aeb"
+		},
+		{
+			"ImportPath": "github.com/rs/xhandler",
+			"Rev": "768e938dd1b2901a776cf66e27a9737d64f9e15f"
+		},
+		{
 			"ImportPath": "golang.org/x/crypto/ssh/terminal",
 			"Rev": "c57d4a71915a248dbad846d60825145062b4c18e"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "d5cd7348bfebdf7dbb6dbb18fa488525f9024293"
 		},
 		{
 			"ImportPath": "gopkg.in/readline.v1",
