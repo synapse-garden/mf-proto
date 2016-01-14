@@ -10,7 +10,7 @@ import (
 )
 
 const source = `---     S Y N A P S E G A R D E N      ---
-            MF-Proto v0.4.0
+            MF-Proto v0.4.1
          © SynapseGarden 2016
  Licensed under Affero GNU Public License
                 version 3
