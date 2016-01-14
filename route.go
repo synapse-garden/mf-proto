@@ -1,41 +1,16 @@
 package main
 
 import (
-	"io"
 	"log"
 	"net/http"
 
-	htr "github.com/julienschmidt/httprouter"
 	"github.com/rs/cors"
 	"github.com/synapse-garden/mf-proto/api"
 	"github.com/synapse-garden/mf-proto/db"
 )
 
-const sourceDoc = `---     S Y N A P S E G A R D E N      ---
-
-            MF-Proto v0.3.0  
-         © SynapseGarden 2015
-
- Licensed under Affero GNU Public License
-                version 3
-
-https://github.com/synapse-garden/mf-proto
-
----                                    ---
-`
-
-func source(r *htr.Router) error {
-	r.GET("/source", func(w http.ResponseWriter, r *http.Request, ps htr.Params) {
-		if _, err := io.WriteString(w, sourceDoc); err != nil {
-			log.Printf("failed to write response: %s", err.Error())
-		}
-	})
-
-	return nil
-}
-
 func runHTTPListeners(d db.DB) {
-	httpMux, err := api.Routes(source)
+	httpMux, err := api.Routes(api.Source(d))
 	if err != nil {
 		log.Fatalf("router setup failed: %s\n", err.Error())
 	}
@@ -45,6 +20,7 @@ func runHTTPListeners(d db.DB) {
 		api.User(d),
 		api.Object(d),
 		api.Task(d),
+		api.Source(d),
 	)
 	if err != nil {
 		log.Fatalf("router setup failed: %s\n", err.Error())
